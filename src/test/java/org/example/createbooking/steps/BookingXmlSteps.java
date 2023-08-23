@@ -1,22 +1,25 @@
 package org.example.createbooking.steps;
 
 import io.cucumber.java.en.Given;
-import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.response.Response;
+import org.example.createbooking.cucumber.ServicesContext;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
+import static io.restassured.config.EncoderConfig.encoderConfig;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class CreateBookingSteps {
+public class BookingXmlSteps {
     private final RequestSpecBuilder requestSpec;
     Map<String, String> contact;
     private String token;
@@ -25,11 +28,13 @@ public class CreateBookingSteps {
     private String priceDetails;
     private String bookingDates;
     private String additionals;
-    private Map<String, Object> bookingId;
+    private List<Integer> bookingIds;
+    ServicesContext servicesContext;
 
-    public CreateBookingSteps() {
+    public BookingXmlSteps(ServicesContext servicesContext) {
         requestSpec = new RequestSpecBuilder().setBaseUri("https://restful-booker.herokuapp.com/");
-        bookingId = new HashMap<>();
+        this.servicesContext = servicesContext;
+        bookingIds = servicesContext.getBookingIds();
     }
 
     @Given("the booking additional information {string}")
@@ -70,12 +75,16 @@ public class CreateBookingSteps {
         String bookingBody = String.format("<booking>\n%1s\n%2s\n%3s\n%4s\n</booking>",
                 guestDetails, priceDetails, bookingDates, additionals);
 
+
         response = given().spec(requestSpec.build())
+                .config(RestAssured.config()
+                        .encoderConfig(encoderConfig().appendDefaultContentCharsetToContentTypeIfUndefined(false)))
+//                .contentType(ContentType.XML)
                 .contentType("text/xml")
-                .accept("*/*")
+                .accept("application/xml")
                 .body(bookingBody)
                 .post("booking");
 
-        bookingId = response.getBody().xmlPath().getMap(".");
+        bookingIds.add(response.getBody().xmlPath().get("$.bookingid"));
     }
 }
